@@ -1,36 +1,58 @@
 //! # Async Channel
+//! # 异步通道
 //!
 //! In this exercise, you will use `tokio::sync::mpsc` async channels to implement producer-consumer pattern.
+//! 在本练习中，你将使用 `tokio::sync::mpsc` 异步通道实现生产者-消费者模式。
 //!
 //! ## Concepts
+//! ## 概念
 //! - `tokio::sync::mpsc::channel` creates bounded async channels
+//! - `tokio::sync::mpsc::channel` 创建有界异步通道
 //! - Async `send` and `recv`
+//! - 异步 `send` 和 `recv`
 //! - Channel closing mechanism (receiver returns None after all senders are dropped)
+//! - 通道关闭机制（所有发送端都被丢弃后，接收端返回 None）
 
 use tokio::sync::mpsc;
 
 /// Async producer-consumer:
+/// 异步生产者-消费者：
 /// - Create a producer task that sends each element from items sequentially
+/// - 创建一个生产者任务，依次发送 items 中的每个元素
 /// - Create a consumer task that receives all elements and collects them into Vec for return
+/// - 创建一个消费者任务，接收所有元素并收集到 Vec 中返回
 ///
 /// Hint: Set channel capacity to items.len().max(1)
+/// 提示：将通道容量设为 items.len().max(1)
 pub async fn producer_consumer(items: Vec<String>) -> Vec<String> {
     // TODO: Create channel with mpsc::channel
+    // TODO：使用 mpsc::channel 创建通道
     // TODO: Spawn producer task: iterate through items, send each one
+    // TODO：启动生产者任务：遍历 items，并逐个发送
     // TODO: Spawn consumer task: loop recv until channel closes, collect results
+    // TODO：启动消费者任务：循环调用 recv，直到通道关闭，并收集结果
     // TODO: Wait for consumer to complete and return results
+    // TODO：等待消费者完成并返回结果
     todo!()
 }
 
 /// Fan‑in pattern: multiple producers, one consumer.
+/// 汇聚模式：多个生产者，一个消费者。
 /// Create `n_producers` producers, each sending `"producer {id}: message"`.
+/// 创建 `n_producers` 个生产者，每个发送 `"producer {id}: message"`。
 /// Consumer collects all messages, sorts them, and returns.
+/// 消费者收集所有消息、排序并返回。
 pub async fn fan_in(n_producers: usize) -> Vec<String> {
     // TODO: Create mpsc channel
+    // TODO：创建 mpsc 通道
     // TODO: Spawn n_producers producer tasks
+    // TODO：启动 n_producers 个生产者任务
     //       Each sends format!("producer {id}: message")
+    //       每个任务发送 format!("producer {id}: message")
     // TODO: Drop the original sender (important! otherwise channel won't close)
+    // TODO：丢弃原始发送端（重要！否则通道不会关闭）
     // TODO: Consumer loops receiving, collects and sorts
+    // TODO：消费者循环接收、收集并排序
     todo!()
 }
 

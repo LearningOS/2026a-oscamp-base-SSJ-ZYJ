@@ -1,18 +1,27 @@
 //! # Spin Lock
+//! # 自旋锁
 //!
 //! In this exercise, you will implement a basic spin lock.
+//! 在本练习中，你将实现一个基本的自旋锁。
 //! Spin locks are one of the most fundamental synchronization primitives in OS kernels.
+//! 自旋锁是操作系统内核中最基础的同步原语之一。
 //!
 //! ## Key Concepts
+//! ## 核心概念
 //! - Spin locks use busy-waiting to acquire the lock
+//! - 自旋锁通过忙等待来获取锁
 //! - `AtomicBool`'s `compare_exchange` to implement lock acquisition
+//! - 使用 `AtomicBool` 的 `compare_exchange` 实现锁的获取
 //! - `core::hint::spin_loop` to reduce CPU power consumption
+//! - 使用 `core::hint::spin_loop` 降低 CPU 功耗
 //! - `UnsafeCell` provides interior mutability
+//! - `UnsafeCell` 提供内部可变性
 
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Basic spin lock
+/// 基本自旋锁
 pub struct SpinLock<T> {
     locked: AtomicBool,
     data: UnsafeCell<T>,
@@ -30,32 +39,45 @@ impl<T> SpinLock<T> {
     }
 
     /// Acquire lock, returning a mutable reference to inner data.
+    /// 获取锁，并返回内部数据的可变引用。
     ///
     /// TODO: Use compare_exchange to spin until lock is acquired
+    /// TODO：使用 compare_exchange 自旋，直到成功获取锁
     /// 1. In a loop, try to change locked from false to true
+    /// 1. 在循环中尝试将 locked 从 false 改为 true
     /// 2. Success uses Acquire ordering, failure uses Relaxed
+    /// 2. 成功时使用 Acquire 顺序，失败时使用 Relaxed 顺序
     /// 3. On failure call `core::hint::spin_loop()` to hint CPU
+    /// 3. 失败时调用 `core::hint::spin_loop()` 提示 CPU
     /// 4. On success return `&mut *self.data.get()`
+    /// 4. 成功时返回 `&mut *self.data.get()`
     ///
     /// # Safety
+    /// # 安全性
     /// Caller must ensure `unlock` is called after using the data.
+    /// 调用者必须确保使用完数据后调用 `unlock`。
     pub fn lock(&self) -> &mut T {
         // TODO
         todo!()
     }
 
     /// Release lock.
+    /// 释放锁。
     ///
     /// TODO: Set locked to false (using Release ordering)
+    /// TODO：将 locked 设为 false（使用 Release 顺序）
     pub fn unlock(&self) {
         // TODO
         todo!()
     }
 
     /// Try to acquire lock without spinning.
+    /// 尝试获取锁，不进行自旋。
     /// Returns Some(&mut T) on success, None if lock is busy.
+    /// 成功时返回 Some(&mut T)，锁正忙时返回 None。
     pub fn try_lock(&self) -> Option<&mut T> {
         // TODO: Single compare_exchange attempt
+        // TODO：仅尝试一次 compare_exchange
         todo!()
     }
 }
