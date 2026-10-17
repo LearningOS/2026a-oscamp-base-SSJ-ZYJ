@@ -77,6 +77,8 @@ pub struct FdTable {
     // 提示：使用 Vec<Option<Arc<dyn File>>>
     //       the index is the fd number, None means the fd is closed or unallocated
     //       索引就是 fd 编号，None 表示 fd 已关闭或尚未分配
+    slots: Vec<Option<Arc<dyn File>>>,
+    count: usize,
 }
 
 impl FdTable {
@@ -84,7 +86,10 @@ impl FdTable {
     /// 创建一个空的 fd 表
     pub fn new() -> Self {
         // TODO
-        todo!()
+        Self {
+            slots: Vec::new(),
+            count: 0,
+        }
     }
 
     /// Allocate a new fd, return the fd number.
@@ -94,28 +99,44 @@ impl FdTable {
     /// 优先重用编号最小的已关闭 fd；如果没有空闲槽位，则追加到末尾。
     pub fn alloc(&mut self, file: Arc<dyn File>) -> usize {
         // TODO
-        todo!()
+        if let Some(fd) = self.slots.iter().position(|slot| slot.is_none()) {
+            self.slots[fd] = Some(file);
+            self.count += 1;
+            fd
+        } else {
+            let fd = self.slots.len();
+            self.slots.push(Some(file));
+            self.count += 1;
+            fd
+        }
     }
 
     /// Get the file object for an fd. Returns None if the fd doesn't exist or is closed.
     /// 获取 fd 对应的文件对象。如果 fd 不存在或已关闭，则返回 None。
     pub fn get(&self, fd: usize) -> Option<Arc<dyn File>> {
         // TODO
-        todo!()
+        self.slots.get(fd).and_then(|slot| slot.clone())
     }
 
     /// Close an fd. Returns true on success, false if the fd doesn't exist or is already closed.
     /// 关闭 fd。成功时返回 true；如果 fd 不存在或已关闭，则返回 false。
     pub fn close(&mut self, fd: usize) -> bool {
         // TODO
-        todo!()
+        match self.slots.get_mut(fd) {
+            Some(slot) if slot.is_some() => {
+                *slot = None;
+                self.count -= 1;
+                true
+            }
+            _ => false,
+        }
     }
 
     /// Return the number of currently allocated fds (excluding closed ones)
     /// 返回当前已分配 fd 的数量（不包括已关闭的）
     pub fn count(&self) -> usize {
         // TODO
-        todo!()
+        self.count
     }
 }
 
@@ -191,11 +212,11 @@ mod tests {
     fn test_close_and_reuse() {
         let mut table = FdTable::new();
         let fd0 = table.alloc(MockFile::new(0)); // fd=0
-        // 文件描述符 = 0
+                                                 // 文件描述符 = 0
         let fd1 = table.alloc(MockFile::new(1)); // fd=1
-        // 文件描述符 = 1
+                                                 // 文件描述符 = 1
         let fd2 = table.alloc(MockFile::new(2)); // fd=2
-        // 文件描述符 = 2
+                                                 // 文件描述符 = 2
 
         assert!(table.close(fd1), "closing fd=1 should succeed");
         assert!(

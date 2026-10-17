@@ -28,13 +28,29 @@ use std::thread;
 pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
     // TODO: Create Arc<Mutex<usize>> with initial value 0
     // TODO：创建初始值为 0 的 Arc<Mutex<usize>>
+    let counter = Arc::new(Mutex::new(0usize));
     // TODO: Spawn n_threads threads
     // TODO：生成 n_threads 个线程
-    // TODO: In each thread, lock() and increment count_per_thread times
-    // TODO：在每个线程中调用 lock() 并递增 count_per_thread 次
+    let mut handles = Vec::new();
+    for _ in 0..n_threads {
+        let counter = Arc::clone(&counter);
+        // TODO: In each thread, lock() and increment count_per_thread times
+        // TODO：在每个线程中调用 lock() 并递增 count_per_thread 次
+        handles.push(thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            for _ in 0..count_per_thread {
+                *num += 1;
+            }
+        }))
+    }
     // TODO: Join all threads, return final value
     // TODO：连接所有线程并返回最终值
-    todo!()
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    let final_value = *counter.lock().unwrap();
+    final_value
 }
 
 /// Add elements to a shared vector concurrently using multiple threads.
@@ -49,11 +65,25 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
 pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
     // TODO: Create Arc<Mutex<Vec<usize>>>
     // TODO：创建 Arc<Mutex<Vec<usize>>>
+    let shared_vec = Arc::new(Mutex::new(Vec::<usize>::new()));
+    let mut handles = Vec::new();
     // TODO: Each thread pushes its own id
     // TODO：每个线程都推入自己的 id
+    for id in 0..n_threads {
+        let shared_vec = Arc::clone(&shared_vec);
+        handles.push(thread::spawn(move || {
+            shared_vec.lock().unwrap().push(id);
+        }));
+    }
     // TODO: After joining all threads, sort the result and return
     // TODO：连接所有线程后，对结果排序并返回
-    todo!()
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    let mut result = shared_vec.lock().unwrap().clone();
+    result.sort();
+    result
 }
 
 #[cfg(test)]

@@ -88,7 +88,7 @@ use std::time::Duration;
 /// fn panic_handling_example() {
 ///     let handle = thread::spawn(|| {
 ///         // Simulate a panic
-///     // 模拟 panic
+///         // 模拟 panic
 ///         panic!("Thread panicked!");
 ///     });
 ///
@@ -205,9 +205,10 @@ pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
     // TODO：创建一个新线程，将 numbers 的每个元素乘以 2
     // Use thread::spawn and move closure
     // 使用 thread::spawn 和 move 闭包
+    let handle = thread::spawn(move || numbers.into_iter().map(|x| x * 2).collect::<Vec<i32>>());
     // Use join().unwrap() to get result
     // 使用 join().unwrap() 获取结果
-    todo!()
+    handle.join().unwrap()
 }
 
 /// Sum two vectors in parallel, returning a tuple of two sums.
@@ -219,9 +220,12 @@ pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
 pub fn parallel_sum(a: Vec<i32>, b: Vec<i32>) -> (i32, i32) {
     // TODO: Create two threads to sum a and b respectively
     // TODO：分别创建两个线程，对 a 和 b 求和
+    let handle_a = thread::spawn(move || a.iter().sum::<i32>());
+    let handle_b = thread::spawn(move || b.iter().sum::<i32>());
+
     // Join both threads to get results
     // 等待两个线程并获取结果
-    todo!()
+    (handle_a.join().unwrap(), handle_b.join().unwrap())
 }
 
 // ============================================================================
@@ -243,11 +247,18 @@ pub fn parallel_sum(a: Vec<i32>, b: Vec<i32>) -> (i32, i32) {
 pub fn named_sleeper(value: i32, ms: u64) -> i32 {
     // TODO: Create a thread builder with name "sleeper"
     // TODO：创建名称为 "sleeper" 的线程构建器
+    let handle = thread::Builder::new()
+        .name("sleeper".into())
+        .spawn(move || {
+            thread::sleep(Duration::from_millis(ms));
+            value
+        })
+        .unwrap();
     // TODO: Spawn a thread that sleeps for `ms` milliseconds and returns `value`
     // TODO：启动线程，使其休眠 `ms` 毫秒后返回 `value`
     // TODO: Join the thread and return the value
     // TODO：等待线程并返回其值
-    todo!()
+    handle.join().unwrap()
 }
 
 thread_local! {
@@ -267,7 +278,11 @@ thread_local! {
 pub fn increment_thread_local() -> usize {
     // TODO: Use THREAD_COUNT.with to increment and return the new count
     // TODO：使用 THREAD_COUNT.with 递增计数并返回新值
-    todo!()
+    THREAD_COUNT.with(|cell| {
+        let mut count = cell.borrow_mut();
+        *count += 1;
+        *count
+    })
 }
 
 /// Spawn two threads using a **scoped thread** to compute the sum of two slices without moving ownership.
@@ -290,9 +305,13 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
     // TODO：使用 thread::scope 生成两个线程
     // TODO: Each thread sums its slice
     // TODO：每个线程都对自己的切片求和
-    // TODO: Wait for both threads and return the results
-    // TODO：等待两个线程并返回结果
-    todo!()
+    thread::scope(|scope| {
+        let handle_a = scope.spawn(|| a.iter().sum::<i32>());
+        let handle_b = scope.spawn(|| b.iter().sum::<i32>());
+        // TODO: Wait for both threads and return the results
+        // TODO：等待两个线程并返回结果
+        (handle_a.join().unwrap(), handle_b.join().unwrap())
+    })
 }
 
 /// Handle a possible panic in a spawned thread.
@@ -317,9 +336,18 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
 pub fn handle_panic(value: i32, should_panic: bool) -> Result<i32, ()> {
     // TODO: Spawn a thread that either panics or returns value
     // TODO：生成一个会 panic 或返回 value 的线程
+    let handle = thread::spawn(move || {
+        if should_panic {
+            panic!("oops")
+        }
+        value
+    });
     // TODO: Join and map the result appropriately
     // TODO：等待线程，并按要求映射结果
-    todo!()
+    match handle.join() {
+        Ok(v) => Ok(v),
+        Err(_) => Err(()),
+    }
 }
 
 #[cfg(test)]

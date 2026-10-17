@@ -59,6 +59,7 @@
 
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::null_mut;
+use core::sync::atomic::Ordering;
 
 /// Free block header, stored at the beginning of each free memory block
 /// 空闲块头部，存储在每个空闲内存块的开头
@@ -68,6 +69,7 @@ struct FreeBlock {
 }
 
 pub struct FreeListAllocator {
+    #[allow(dead_code)]
     heap_start: usize,
     heap_end: usize,
     /// Bump pointer: unallocated region starts here
@@ -148,13 +150,47 @@ unsafe impl GlobalAlloc for FreeListAllocator {
         // - 如果找到，从链表中移除它（更新 prev 的 next 或 free_list 头部）
         // - Return curr as *mut u8
         // - 将 curr 作为 *mut u8 返回
+        let mut prev: *mut FreeBlock = null_mut();
+        let mut curr = self.free_list_head();
 
+        while !curr.is_null() {
+            let curr_addr = curr as usize;
+            if curr_addr % align == 0 && (*curr).size >= size {
+                let next = (*curr).next;
+                if prev.is_null() {
+                    self.set_free_list_head(next);
+                } else {
+                    (*prev).next = next;
+                }
+                return curr as *mut u8;
+            }
+            prev = curr;
+            curr = (*curr).next;
+        }
         // TODO: Step 2 — no suitable block in free_list, allocate from bump region
         // TODO: 步骤 2 — free_list 中没有合适的块，从 bump 区域分配
         //
         // Same logic as 02_bump_allocator's alloc
         // 与 02_bump_allocator 的 alloc 使用相同逻辑
-        todo!()
+        let mut current = self.bump_next.load(Ordering::SeqCst);
+        loop {
+            let aligned = (current + align - 1) & !(align - 1);
+            let end = aligned + size;
+
+            if end > self.heap_end {
+                return null_mut();
+            }
+
+            match self.bump_next.compare_exchange_weak(
+                current,
+                end,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ) {
+                Ok(_) => return aligned as *mut u8,
+                Err(actual) => current = actual,
+            }
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -171,7 +207,10 @@ unsafe impl GlobalAlloc for FreeListAllocator {
         // 2. 写入 FreeBlock { size, next: 当前链表头部 }
         // 3. Update free_list head to ptr
         // 3. 将 free_list 头部更新为 ptr
-        todo!()
+        let block = ptr as *mut FreeBlock;
+        let head = self.free_list_head();
+        block.write(FreeBlock { size, next: head });
+        self.set_free_list_head(block);
     }
 }
 

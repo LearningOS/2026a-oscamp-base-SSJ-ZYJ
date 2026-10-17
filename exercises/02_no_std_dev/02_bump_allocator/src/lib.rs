@@ -108,7 +108,28 @@ unsafe impl GlobalAlloc for BumpAllocator {
         //    （如果 CAS 失败，说明另一个线程发生竞争——在循环中重试）
         // 6. Return the aligned address as a pointer
         // 6. 将对齐后的地址作为指针返回
-        todo!()
+        let align = layout.align();
+        let size = layout.size();
+
+        let mut current = self.next.load(Ordering::SeqCst);
+        loop {
+            let aligned = (current + align - 1) & !(align - 1);
+            let end = aligned + size;
+
+            if end > self.heap_end {
+                return null_mut();
+            }
+
+            match self
+                .next
+                .compare_exchange_weak(current, end, Ordering::SeqCst, Ordering::SeqCst)
+            {
+                Ok(_) => return aligned as *mut u8,
+                Err(actual) => {
+                    current = actual;
+                }
+            }
+        }
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {

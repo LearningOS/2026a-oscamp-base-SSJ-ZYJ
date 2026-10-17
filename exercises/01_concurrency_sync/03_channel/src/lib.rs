@@ -25,13 +25,23 @@ use std::thread;
 pub fn simple_send_recv(items: Vec<String>) -> Vec<String> {
     // TODO: Create channel
     // TODO：创建通道
+    let (tx, rx) = mpsc::channel();
     // TODO: Spawn thread to send each element in items
     // TODO：生成线程以发送 items 中的每个元素
+    thread::spawn(move || {
+        for item in items {
+            tx.send(item).unwrap();
+        }
+    });
     // TODO: In main thread, receive all messages and collect into Vec
     // TODO：在主线程中接收所有消息并收集到 Vec 中
+    let mut result = Vec::new();
+    while let Ok(msg) = rx.recv() {
+        result.push(msg);
+    }
     // Hint: When all Senders are dropped, recv() returns Err
     // 提示：所有 Sender 都被丢弃后，recv() 会返回 Err
-    todo!()
+    result
 }
 
 /// Create `n_producers` producer threads, each sending a message in format `"msg from {id}"`.
@@ -44,13 +54,23 @@ pub fn simple_send_recv(items: Vec<String>) -> Vec<String> {
 pub fn multi_producer(n_producers: usize) -> Vec<String> {
     // TODO: Create channel
     // TODO：创建通道
+    let (tx, rx) = mpsc::channel();
     // TODO: Clone a sender for each producer
     // TODO：为每个生产者克隆一个发送端
+    for id in 0..n_producers {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            tx.send(format!("msg from {}", id)).unwrap();
+        });
+    }
     // TODO: Remember to drop the original sender, otherwise receiver won't finish
     // TODO：记得丢弃原始发送端，否则接收端不会结束
+    drop(tx);
     // TODO: Collect all messages and sort
     // TODO：收集所有消息并排序
-    todo!()
+    let mut result: Vec<String> = rx.iter().collect();
+    result.sort();
+    result
 }
 
 #[cfg(test)]
