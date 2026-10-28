@@ -55,7 +55,17 @@ impl<T> SpinLock<T> {
         // TODO：自旋等待获取锁
         // TODO: Return SpinGuard { lock: self }
         // TODO：返回 SpinGuard { lock: self }
-        todo!()
+        loop {
+            match self.locked.compare_exchange_weak(
+                false,
+                true,
+                Ordering::Acquire,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return SpinGuard { lock: self },
+                Err(_) => core::hint::spin_loop(),
+            }
+        }
     }
 }
 
@@ -67,7 +77,7 @@ impl<T> Deref for SpinGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        todo!()
+        unsafe { &*self.lock.data.get() }
     }
 }
 
@@ -77,7 +87,7 @@ impl<T> Deref for SpinGuard<'_, T> {
 // 返回 &mut T
 impl<T> DerefMut for SpinGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
-        todo!()
+        unsafe { &mut *self.lock.data.get() }
     }
 }
 
@@ -87,7 +97,7 @@ impl<T> DerefMut for SpinGuard<'_, T> {
 // 将 lock.locked 设为 false（Release 顺序）
 impl<T> Drop for SpinGuard<'_, T> {
     fn drop(&mut self) {
-        todo!()
+        self.lock.locked.store(false, Ordering::Release);
     }
 }
 

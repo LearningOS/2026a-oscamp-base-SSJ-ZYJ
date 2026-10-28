@@ -79,7 +79,11 @@ impl TaskContext {
     /// - Leave `s0`–`s11` zero; they will be loaded on switch.
     /// - 将 `s0`–`s11` 保持为零；切换时会加载它们。
     pub fn init(&mut self, stack_top: usize, entry: usize) {
-        todo!("set ra = entry, sp = stack_top (16-byte aligned)")
+        *self = Self {
+            sp: (stack_top & !0xf) as u64,
+            ra: entry as u64,
+            ..Self::empty()
+        }
     }
 }
 
@@ -91,8 +95,41 @@ impl TaskContext {
 ///
 /// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
 /// 必须使用 `#[unsafe(naked)]`，防止编译器生成序言/尾声。
-pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
-    todo!("save callee-saved regs to old, load from new, then ret; use #[unsafe(naked)] + naked_asm!, see module doc for riscv64 ABI and layout")
+#[unsafe(naked)]
+pub unsafe extern "C" fn switch_context(old: &mut TaskContext, new: &TaskContext) {
+    core::arch::naked_asm!(
+        "sd sp, 0(a0)",
+        "sd ra, 8(a0)",
+        "sd s0, 16(a0)",
+        "sd s1, 24(a0)",
+        "sd s2, 32(a0)",
+        "sd s3, 40(a0)",
+        "sd s4, 48(a0)",
+        "sd s5, 56(a0)",
+        "sd s6, 64(a0)",
+        "sd s7, 72(a0)",
+        "sd s8, 80(a0)",
+        "sd s9, 88(a0)",
+        "sd s10, 96(a0)",
+        "sd s11, 104(a0)",
+        "ld sp, 0(a1)",
+        "ld ra, 8(a1)",
+        "ld s0, 16(a1)",
+        "ld s1, 24(a1)",
+        "ld s2, 32(a1)",
+        "ld s3, 40(a1)",
+        "ld s4, 48(a1)",
+        "ld s5, 56(a1)",
+        "ld s6, 64(a1)",
+        "ld s7, 72(a1)",
+        "ld s8, 80(a1)",
+        "ld s9, 88(a1)",
+        "ld s10, 96(a1)",
+        "ld s11, 104(a1)",
+        "mv a0, zero",
+        "mv a1, zero",
+        "ret",
+    );
 }
 
 const STACK_SIZE: usize = 1024 * 64;
@@ -102,7 +139,13 @@ const STACK_SIZE: usize = 1024 * 64;
 /// (stack grows down). The buffer must be kept alive for the lifetime of the context using this stack.
 /// （栈向低地址增长）。在使用此栈的上下文生命周期内，必须保持 buffer 存活。
 pub fn alloc_stack() -> (Vec<u8>, usize) {
-    todo!("allocate stack buffer, return (buffer, stack_top) with stack_top 16-byte aligned")
+    let stack = vec![0u8; STACK_SIZE];
+    assert!(
+        stack.as_ptr() as usize % 16 == 0,
+        "stack must be 16-byte aligned"
+    );
+    let stack_top = stack.as_ptr() as usize + STACK_SIZE;
+    (stack, stack_top)
 }
 
 #[cfg(test)]

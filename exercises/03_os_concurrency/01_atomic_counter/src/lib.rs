@@ -35,21 +35,21 @@ impl AtomicCounter {
     /// 提示：使用带有 `Ordering::Relaxed` 的 `fetch_add`
     pub fn increment(&self) -> u64 {
         // TODO
-        todo!()
+        self.value.fetch_add(1, Ordering::Relaxed)
     }
 
     /// Atomically decrements by 1, returns the value **before** decrement.
     /// 原子地减 1，并返回递减**前**的值。
     pub fn decrement(&self) -> u64 {
         // TODO
-        todo!()
+        self.value.fetch_sub(1, Ordering::Relaxed)
     }
 
     /// Gets the current value.
     /// 获取当前值。
     pub fn get(&self) -> u64 {
         // TODO
-        todo!()
+        self.value.load(Ordering::Relaxed)
     }
 
     /// Atomic CAS (Compare-And-Swap) operation.
@@ -63,7 +63,8 @@ impl AtomicCounter {
     /// 提示：使用 `compare_exchange`，成功顺序为 `Ordering::AcqRel`，失败顺序为 `Ordering::Acquire`
     pub fn compare_and_swap(&self, expected: u64, new_val: u64) -> Result<u64, u64> {
         // TODO
-        todo!()
+        self.value
+            .compare_exchange(expected, new_val, Ordering::AcqRel, Ordering::Acquire)
     }
 
     /// Multiply the value atomically using a CAS loop.
@@ -81,7 +82,19 @@ impl AtomicCounter {
         //     let new = current * multiplier;
         //     match self.compare_and_swap(current, new) { ... }
         // }
-        todo!()
+        let mut current = self.value.load(Ordering::Relaxed);
+        loop {
+            let new = current.wrapping_mul(multiplier);
+            match self.value.compare_exchange_weak(
+                current,
+                new,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return current,
+                Err(actual) => current = actual,
+            }
+        }
     }
 }
 

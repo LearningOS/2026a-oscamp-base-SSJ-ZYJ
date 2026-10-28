@@ -60,7 +60,8 @@ impl FlagChannel {
         // TODO：存储数据（选择合适的 Ordering）
         // TODO: Set ready = true (choose appropriate Ordering so data writes complete before this)
         // TODO：设置 ready = true（选择合适的 Ordering，使数据写入先于此操作完成）
-        todo!()
+        self.data.store(value, Ordering::Relaxed);
+        self.ready.store(true, Ordering::Release);
     }
 
     /// Consumer: spin-wait for ready flag, then read data.
@@ -77,7 +78,10 @@ impl FlagChannel {
         // TODO：自旋等待 ready 变为 true（选择合适的 Ordering）
         // TODO: Read data (choose appropriate Ordering)
         // TODO：读取数据（选择合适的 Ordering）
-        todo!()
+        while !self.ready.load(Ordering::Acquire) {
+            std::hint::spin_loop();
+        }
+        self.data.load(Ordering::Relaxed)
     }
 
     /// Reset channel state
@@ -117,7 +121,16 @@ impl OnceCell {
         // TODO：使用 compare_exchange 确保只初始化一次
         // Store value on success
         // 成功时存储值
-        todo!()
+        if self
+            .initialized
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            self.value.store(val, Ordering::Release);
+            true
+        } else {
+            false
+        }
     }
 
     /// Get value. Returns Some if initialized, otherwise None.
@@ -125,7 +138,11 @@ impl OnceCell {
     pub fn get(&self) -> Option<u32> {
         // TODO: Check initialized flag, then read value
         // TODO：检查 initialized 标志，然后读取值
-        todo!()
+        if self.initialized.load(Ordering::Acquire) {
+            Some(self.value.load(Ordering::Relaxed))
+        } else {
+            None
+        }
     }
 }
 
